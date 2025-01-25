@@ -1,6 +1,7 @@
 #define i32 int
 #define loop for (;;)
 #define let
+#define drop
 
 __attribute__((import_module("wasi_snapshot_preview1"),
                import_name("fd_read"))) let i32
@@ -48,9 +49,9 @@ let void _start()
 
     let i32 contents[1];
     let i32 contents_len[1];
-    fd_read_all(0, contents, contents_len);
+    drop fd_read_all(0, contents, contents_len);
 
     iov[0] = contents[0];
     iov[1] = contents_len[0];
-    fd_write(1, iov, 1, nrw);
+    drop fd_write(1, iov, 1, nrw);
 }
