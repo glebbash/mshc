@@ -116,13 +116,15 @@ function fprint_u32(fd: i32, n: u32): i32 {
   const num_buf_len = 10 as u32;
   const num_buf = memory.data(num_buf_len) as u32;
 
-  let i = num_buf_len - 1;
+  let i = num_buf_len;
   while (true) {
+    i -= 1;
     const digit = (48 + (n % 10)) as u8;
     store<u8>(num_buf + i, digit);
-    i -= 1;
     n = n / 10;
-    if (n == 0) break;
+    if (n == 0) {
+      break;
+    }
   }
 
   return fputs(fd, num_buf + i, num_buf_len - i);
