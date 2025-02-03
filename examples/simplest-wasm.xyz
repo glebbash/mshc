@@ -1,0 +1,7 @@
+; Simplest WASM module. https://developer.mozilla.org/en-US/docs/WebAssembly/Guides/Understanding_the_text_format#the_simplest_module
+
+; \0ASM
+> 00 61 73 6D
+
+; version 1
+> 01 00 00 00

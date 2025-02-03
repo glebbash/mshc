@@ -72,7 +72,7 @@ export fn _start() {
                 if byte_hi >= '0' && byte_hi <= '9' {
                     byte = (byte_hi - '0') * 16 as u8;
                 } else if byte_hi >= 'A' && byte_hi <= 'F' {
-                    byte = (byte_hi - 'A' + 10 as u8) * 16 as u8;
+                    byte = ((byte_hi - 'A') + 10 as u8) * 16 as u8;
                 } else {
                     panic_syntax_error(i);
                 };
