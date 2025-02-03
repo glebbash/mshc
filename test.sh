@@ -20,7 +20,7 @@ set -xe
 # AssemblyScript language, WASM target:
 
   # 1. compile initial compiler
-  npx -y asc ./src/mshc.ts -o ./bin/mshc-as.wasm
+  npm ci --silent && npx asc ./src/mshc.ts -o ./bin/mshc-as.wasm
 
   # 2. generate source of the compiler in XYZ language
   node ./utils/wasm2xyz.mjs < ./bin/mshc-as.wasm \
