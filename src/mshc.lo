@@ -1,44 +1,23 @@
-include "./std.lo";
-
-struct wasi {};
-
-import from "wasi_snapshot_preview1" {
-    fn wasi::fd_read(fd: u32, iovs: &void, iovs_len: u32, nread: &u32): u32;
-
-    fn wasi::fd_write(fd: u32, iovs: &void, iovs_len: u32, nwritten: &u32): u32;
-
-    fn wasi::proc_exit(code: u32): never;
-};
-
-export memory {
-    min_pages: 2,
-};
-
-global mem = @data_size;
-
-global stack = @data_size;
-
-const STDIN = 0;
-const STDOUT = 1;
-const STDERR = 2;
+include "./lib/std.lo";
+include "./lib/io.lo";
 
 export fn _start() {
-    stack = mem::align_to(stack, sizeof &void);
-    // 20KB stack
-    mem = stack + 20 * 1024;
+    init_stack!(20 * 1024);
+    // 
     let nread_ref = stack_alloc!<u32>();
     let contents_ref_ref = stack_alloc!<*&u8>();
-    let err = fread(STDIN, nread_ref, contents_ref_ref);
-    if err {
+    fread(STDIN, nread_ref, contents_ref_ref) catch err {
         wasi::proc_exit(err);
     };
     let nread = *nread_ref;
     let contents_ref = *contents_ref_ref;
+    // 
     let i = 0;
     loop {
         if i == nread {
             break;
         };
+        // 
         let char = *array_at!<u8>(contents_ref, i);
         if char == '\n' {
             i += 1;
@@ -65,6 +44,7 @@ export fn _start() {
                 if *array_at!<u8>(contents_ref, i) != ' ' {
                     panic_syntax_error(i);
                 };
+                // 
                 let byte = 0 as u8;
                 i += 1;
                 if i >= nread {
@@ -78,6 +58,7 @@ export fn _start() {
                 } else {
                     panic_syntax_error(i);
                 };
+                // 
                 i += 1;
                 if i >= nread {
                     panic_syntax_error(i);
@@ -90,6 +71,7 @@ export fn _start() {
                 } else {
                     panic_syntax_error(i);
                 };
+                // 
                 let byte_ref = stack_alloc!<u8>();
                 *byte_ref = byte as u8;
                 let _ = fputs(STDOUT, .str {
@@ -99,6 +81,7 @@ export fn _start() {
             };
             continue;
         };
+        // 
         panic_syntax_error(i);
     };
 };
@@ -107,54 +90,6 @@ fn panic_syntax_error(offset: u32): void {
     fputs(STDERR, "syntax error: ");
     fprint_u32(STDERR, offset);
     fputs(STDERR, "\n");
+    // 
     wasi::proc_exit(1);
-};
-
-fn fprint_u32(fd: u32, n: u32) {
-    let num_buf_len = 10;
-    let num_buf = stack_alloc_n!<u8>(num_buf_len);
-    let i = num_buf_len;
-    loop {
-        i -= 1;
-        let digit = (48 + n % 10) as u8;
-        *array_at!<u8>(num_buf, i) = digit;
-        n = n / 10;
-        if n == 0 {
-            break;
-        };
-    };
-    fputs(fd, .str {
-        data: (num_buf as u32 + i) as *&u8,
-        size: num_buf_len - i,
-    });
-};
-
-fn fread(fd: u32, nread_ref: &u32, contents_ref_ref: &*&u8): u32 {
-    let iov = stack_alloc_n!<u32>(2);
-    let contents_ref = mem;
-    let nread = 0;
-    loop {
-        *array_at!<u32>(iov, 0) = contents_ref + nread;
-        *array_at!<u32>(iov, 1) = 256;
-        let err = wasi::fd_read(fd, iov as &void, 1, nread_ref);
-        if err {
-            return err;
-        };
-        let nread_now = *nread_ref;
-        if nread_now == 0 {
-            break;
-        };
-        nread += nread_now;
-        mem += nread_now;
-    };
-    *nread_ref = nread;
-    *contents_ref_ref = contents_ref;
-    return 0;
-};
-
-fn fputs(fd: u32, message: str) {
-    let iov = stack_alloc!<str>();
-    *iov = message;
-    let nwritten = stack_alloc!<u32>();
-    let _ = wasi::fd_write(fd, iov as &void, 1, nwritten);
 };

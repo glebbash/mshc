@@ -1,0 +1,64 @@
+include "./std.lo";
+
+struct wasi {};
+
+import from "wasi_snapshot_preview1" {
+    fn wasi::fd_read(fd: u32, iovs: &void, iovs_len: u32, nread: &u32): u32;
+
+    fn wasi::fd_write(fd: u32, iovs: &void, iovs_len: u32, nwritten: &u32): u32;
+
+    fn wasi::proc_exit(code: u32): never;
+};
+
+const STDIN = 0;
+const STDOUT = 1;
+const STDERR = 2;
+
+fn fprint_u32(fd: u32, n: u32) {
+    let num_buf_len = 10;
+    let num_buf = stack_alloc_n!<u8>(num_buf_len);
+    let i = num_buf_len;
+    loop {
+        i -= 1;
+        let digit = (48 + n % 10) as u8;
+        *array_at!<u8>(num_buf, i) = digit;
+        n = n / 10;
+        if n == 0 {
+            break;
+        };
+    };
+    fputs(fd, .str {
+        data: (num_buf as u32 + i) as *&u8,
+        size: num_buf_len - i,
+    });
+};
+
+fn fread(fd: u32, nread_ref: &u32, contents_ref_ref: &*&u8): Result<void, u32> {
+    let iov = stack_alloc_n!<u32>(2);
+    let contents_ref = mem;
+    let nread = 0;
+    loop {
+        *array_at!<u32>(iov, 0) = contents_ref + nread;
+        *array_at!<u32>(iov, 1) = 256;
+        let err = wasi::fd_read(fd, iov as &void, 1, nread_ref);
+        if err {
+            return err;
+        };
+        let nread_now = *nread_ref;
+        if nread_now == 0 {
+            break;
+        };
+        nread += nread_now;
+        mem += nread_now;
+    };
+    *nread_ref = nread;
+    *contents_ref_ref = contents_ref;
+    return 0;
+};
+
+fn fputs(fd: u32, message: str) {
+    let iov = stack_alloc!<str>();
+    *iov = message;
+    let nwritten = stack_alloc!<u32>();
+    let _ = wasi::fd_write(fd, iov as &void, 1, nwritten);
+};

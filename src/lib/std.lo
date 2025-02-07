@@ -1,4 +1,17 @@
-// utils
+export memory {
+    min_pages: 2,
+};
+
+global mem = @data_size;
+
+global stack = @data_size;
+
+macro init_stack!(stack_size: u32) {
+    stack = mem::align_to(stack, sizeof &void);
+    // 20KB stack
+    mem = stack + stack_size;
+};
+
 struct str {
     data: *&u8,
     size: u32,
