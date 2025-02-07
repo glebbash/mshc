@@ -1,0 +1,30 @@
+// utils
+struct str {
+    data: *&u8,
+    size: u32,
+};
+
+macro stack_alloc!<T>(): &T {
+    stack_alloc_n!<T>(1) as &T;
+};
+
+macro stack_alloc_n!<T>(len: u32): &T {
+    let to_alloc = mem::align_to(len * sizeof T, sizeof &void);
+    let ptr = stack;
+    stack += to_alloc;
+    defer stack -= to_alloc;
+    ptr;
+};
+
+macro array_at!<T>(array: *&T, index: u32): &T {
+    (array as u32 + index * sizeof T) as &T;
+};
+
+fn mem::align_to(size: u32, size_multiple: u32): u32 {
+    let remaining_to_align = size % size_multiple;
+    if remaining_to_align == 0 {
+        return size;
+    };
+    let padding = size_multiple - remaining_to_align;
+    return size + padding;
+};
